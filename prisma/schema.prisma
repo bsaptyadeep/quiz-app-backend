@@ -13,13 +13,45 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum QuizStatus {
+  processing
+  processing_topics
+  ready
+  failed
+}
+
+enum TopicStatus {
+  pending
+  processing
+  ready
+  failed
+}
+
 model Quiz {
-  id         String   @id @default(uuid())
-  sourceUrl  String
-  title      String?
-  questions  Json
-  status     String   @default("ready")
-  createdAt  DateTime @default(now())
+  id        String     @id @default(uuid())
+  sourceUrl String
+  title     String?
+  questions Json?
+  status    QuizStatus @default(processing)
+  createdAt DateTime   @default(now())
+  topics    Topic[]
 
   @@map("quizzes")
+}
+
+model Topic {
+  id            String      @id @default(uuid())
+  quizId        String
+  title         String
+  summary       String?
+  level         Int
+  parentId      String?
+  content       Json
+  tokenEstimate Int
+  status        TopicStatus @default(pending)
+  createdAt     DateTime    @default(now())
+  quiz          Quiz        @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+  @@map("topics")
 }

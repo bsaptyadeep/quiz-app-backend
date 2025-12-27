@@ -1,6 +1,6 @@
 import express from 'express';
-import { createQuiz, getQuizById, submitQuiz } from '../controllers/quiz.controller.js';
-import { validate, createQuizSchema, submitQuizSchema, quizIdSchema } from '../middleware/validate.middleware.js';
+import { createQuiz, getQuizById, submitQuiz, generateQuizFromTopics } from '../controllers/quiz.controller.js';
+import { validate, createQuizSchema, submitQuizSchema, quizIdSchema, generateQuizSchema } from '../middleware/validate.middleware.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { createQuizLimiter } from '../middleware/rate-limit.middleware.js';
 
@@ -238,6 +238,105 @@ router.get('/:quizId', validate(undefined, { paramsSchema: quizIdSchema }), asyn
  *         description: Internal server error
  */
 router.post('/:quizId/submit', validate(submitQuizSchema, { paramsSchema: quizIdSchema }), asyncHandler(submitQuiz));
+
+/**
+ * @swagger
+ * /api/quizzes/{quizId}/generate:
+ *   post:
+ *     summary: Generate quiz from selected topics
+ *     tags: [Quizzes]
+ *     parameters:
+ *       - in: path
+ *         name: quizId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The ID of the quiz to generate questions for
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - topicIds
+ *               - difficulty
+ *             properties:
+ *               topicIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: Array of topic IDs to generate questions from
+ *                 example: ["123e4567-e89b-12d3-a456-426614174000", "223e4567-e89b-12d3-a456-426614174001"]
+ *               difficulty:
+ *                 type: string
+ *                 enum: [easy, medium, hard]
+ *                 description: Difficulty level for the generated questions
+ *                 example: "medium"
+ *     responses:
+ *       200:
+ *         description: Quiz generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 quizId:
+ *                   type: string
+ *                   format: uuid
+ *                   example: "123e4567-e89b-12d3-a456-426614174000"
+ *                 status:
+ *                   type: string
+ *                   example: "ready"
+ *                 questionCount:
+ *                   type: integer
+ *                   example: 10
+ *                 message:
+ *                   type: string
+ *                   example: "Successfully generated 10 questions from 3 topic(s)"
+ *       400:
+ *         description: Bad request - Validation failed or topics don't belong to quiz
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Some topic IDs do not belong to this quiz"
+ *                 missingTopicIds:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       404:
+ *         description: Quiz not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Quiz not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to generate quiz from topics"
+ */
+router.post(
+  '/:quizId/generate',
+  validate(generateQuizSchema, { paramsSchema: quizIdSchema }),
+  asyncHandler(generateQuizFromTopics)
+);
 
 export default router;
 

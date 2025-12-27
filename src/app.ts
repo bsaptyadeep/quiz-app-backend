@@ -4,6 +4,7 @@ import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import healthRouter from './routes/health.routes.js';
 import quizRouter from './routes/quiz.routes.js';
+import topicRouter from './routes/topic.routes.js';
 import getSwaggerSpec from './swagger.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { generalLimiter } from './middleware/rate-limit.middleware.js';
@@ -58,6 +59,9 @@ apiRouter.get('/', (req, res) => {
 
 // Quiz routes
 apiRouter.use('/quizzes', quizRouter);
+
+// Topic routes
+apiRouter.use('/quizzes', topicRouter);
 
 // Global error handler (must be after all routes)
 app.use(errorHandler);

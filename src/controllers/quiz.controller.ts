@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { orchestrateQuiz } from '../services/agent-orchestrator.service.js';
+import { generateQuizForTopic, type Difficulty } from '../services/topic-quiz-generator.service.js';
 import type { MCQ } from '../services/quiz-generator.service.js';
 
 /**
@@ -101,29 +102,17 @@ export async function createQuiz(req: Request, res: Response) {
       },
     });
 
-    // Start async quiz generation (don't await)
-    orchestrateQuiz(source_url)
-      .then(async (quiz) => {
-        // Update quiz with generated data
-        await prisma.quiz.update({
-          where: { id: savedQuiz.id },
-          data: {
-            title: quiz.title,
-            questions: quiz.questions as any, // Prisma Json type
-            status: 'ready',
-          },
-        });
-      })
-      .catch(async (error) => {
-        console.error('Error generating quiz:', error);
-        // Update quiz status to failed
-        await prisma.quiz.update({
-          where: { id: savedQuiz.id },
-          data: {
-            status: 'failed',
-          },
-        });
+    // Start async topic processing (don't await)
+    orchestrateQuiz(savedQuiz.id, source_url).catch(async (error) => {
+      console.error('Error processing topics:', error);
+      // Update quiz status to failed
+      await prisma.quiz.update({
+        where: { id: savedQuiz.id },
+        data: {
+          status: 'failed',
+        },
       });
+    });
 
     // Return quiz_id immediately
     return res.status(201).json({ 
@@ -177,6 +166,115 @@ export async function getQuizById(req: Request, res: Response) {
   } catch (error) {
     console.error('Error fetching quiz:', error);
     return res.status(500).json({ error: 'Failed to fetch quiz' });
+  }
+}
+
+/**
+ * Generate quiz from selected topics
+ * POST /api/quizzes/:quizId/generate
+ */
+export async function generateQuizFromTopics(req: Request, res: Response) {
+  try {
+    const { quizId } = req.params;
+    const { topicIds, difficulty } = req.body;
+
+    // Verify quiz exists
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+    });
+
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    // Validate that all topicIds belong to this quiz
+    const topics = await prisma.topic.findMany({
+      where: {
+        id: { in: topicIds },
+        quizId: quizId,
+      },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+      },
+    });
+
+    // Check if all requested topics were found
+    if (topics.length !== topicIds.length) {
+      const foundIds = topics.map((t) => t.id);
+      const missingIds = topicIds.filter((id: string) => !foundIds.includes(id));
+      return res.status(400).json({
+        error: 'Some topic IDs do not belong to this quiz',
+        missingTopicIds: missingIds,
+      });
+    }
+
+    // Generate quizzes for each topic in parallel
+    const questionPromises = topics.map(async (topic) => {
+      try {
+        // Topic content is stored as Json, convert to string array
+        const content = Array.isArray(topic.content)
+          ? (topic.content as string[])
+          : typeof topic.content === 'string'
+          ? [topic.content]
+          : [];
+
+        const questions = await generateQuizForTopic(
+          {
+            title: topic.title,
+            content: content,
+          },
+          difficulty as Difficulty,
+          { quizId, topicId: topic.id }
+        );
+
+        return questions;
+      } catch (error) {
+        console.error(`Failed to generate quiz for topic ${topic.id}:`, error);
+        // Return empty array if generation fails for a topic
+        return [];
+      }
+    });
+
+    // Wait for all topic quizzes to be generated
+    const allQuestionArrays = await Promise.all(questionPromises);
+
+    // Merge all questions into a single array
+    const allQuestions: MCQ[] = allQuestionArrays.flat();
+
+    if (allQuestions.length === 0) {
+      return res.status(500).json({ error: 'Failed to generate any questions from the selected topics' });
+    }
+
+    // Shuffle questions using Fisher-Yates algorithm
+    const shuffled = [...allQuestions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    // Cap to 10 questions
+    const finalQuestions = shuffled.slice(0, 10);
+
+    // Save questions to Quiz.questions and update status to "ready"
+    await prisma.quiz.update({
+      where: { id: quizId },
+      data: {
+        questions: finalQuestions as any, // Prisma Json type
+        status: 'ready',
+      },
+    });
+
+    return res.json({
+      quizId,
+      status: 'ready',
+      questionCount: finalQuestions.length,
+      message: `Successfully generated ${finalQuestions.length} questions from ${topics.length} topic(s)`,
+    });
+  } catch (error) {
+    console.error('Error generating quiz from topics:', error);
+    return res.status(500).json({ error: 'Failed to generate quiz from topics' });
   }
 }
 

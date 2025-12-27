@@ -64,3 +64,13 @@ export const quizIdSchema = z.object({
   quizId: z.string().uuid('Quiz ID must be a valid UUID'),
 });
 
+/**
+ * Schema for POST /api/quizzes/:quizId/generate request body
+ */
+export const generateQuizSchema = z.object({
+  topicIds: z.array(z.string().uuid('Topic ID must be a valid UUID')).min(1, 'At least one topic ID is required'),
+  difficulty: z.enum(['easy', 'medium', 'hard'], {
+    errorMap: () => ({ message: 'Difficulty must be one of: easy, medium, hard' }),
+  }),
+});
+
