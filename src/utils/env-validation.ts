@@ -6,6 +6,7 @@ export function validateEnv() {
   const requiredEnvVars = [
     'DATABASE_URL',
     'OPENAI_API_KEY',
+    'CLERK_SECRET_KEY',
   ];
 
   const missing: string[] = [];

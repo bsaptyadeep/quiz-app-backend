@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { orchestrateQuiz } from '../services/agent-orchestrator.service.js';
 import { generateQuizForTopic, type Difficulty } from '../services/topic-quiz-generator.service.js';
 import type { MCQ } from '../services/quiz-generator.service.js';
+import type { AuthRequest } from '../middleware/auth.middleware.js';
 
 /**
  * Submit quiz answers and get score
@@ -28,6 +29,12 @@ export async function submitQuiz(req: Request, res: Response) {
 
     if (!quiz) {
       return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    // Check if user owns this quiz
+    const authReq = req as AuthRequest;
+    if (authReq.auth?.userId !== quiz.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
     if (quiz.status !== 'ready') {
@@ -91,11 +98,18 @@ export async function submitQuiz(req: Request, res: Response) {
 export async function createQuiz(req: Request, res: Response) {
   try {
     const { source_url } = req.body;
+    const authReq = req as AuthRequest;
+
+    // Auth middleware ensures userId is present, but add safety check
+    if (!authReq.auth?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     // Create quiz record with processing status
     // Provide empty questions array initially for processing status
     const savedQuiz = await prisma.quiz.create({
       data: {
+        userId: authReq.auth.userId,
         sourceUrl: source_url,
         status: 'processing',
         questions: [], // Empty array as placeholder during processing
@@ -145,6 +159,12 @@ export async function getQuizById(req: Request, res: Response) {
 
     if (!quiz) {
       return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    // Check if user owns this quiz
+    const authReq = req as AuthRequest;
+    if (authReq.auth?.userId !== quiz.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
     // Remove answerIndex from questions before response

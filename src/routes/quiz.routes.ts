@@ -3,6 +3,7 @@ import { createQuiz, getQuizById, submitQuiz, generateQuizFromTopics } from '../
 import { validate, createQuizSchema, submitQuizSchema, quizIdSchema, generateQuizSchema } from '../middleware/validate.middleware.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { createQuizLimiter } from '../middleware/rate-limit.middleware.js';
+import { ClerkExpressRequireAuth } from '@clerk/clerk-sdk-node';
 
 const router = express.Router();
 
@@ -72,7 +73,7 @@ const router = express.Router();
  *                   type: string
  *                   example: "Failed to create quiz"
  */
-router.post('/', createQuizLimiter, validate(createQuizSchema), asyncHandler(createQuiz));
+router.post('/', createQuizLimiter, ClerkExpressRequireAuth(), validate(createQuizSchema), asyncHandler(createQuiz));
 
 /**
  * @swagger
@@ -159,7 +160,7 @@ router.post('/', createQuizLimiter, validate(createQuizSchema), asyncHandler(cre
  *                   type: string
  *                   example: "Failed to fetch quiz"
  */
-router.get('/:quizId', validate(undefined, { paramsSchema: quizIdSchema }), asyncHandler(getQuizById));
+router.get('/:quizId', ClerkExpressRequireAuth(), validate(undefined, { paramsSchema: quizIdSchema }), asyncHandler(getQuizById));
 
 /**
  * @swagger
@@ -237,7 +238,7 @@ router.get('/:quizId', validate(undefined, { paramsSchema: quizIdSchema }), asyn
  *       500:
  *         description: Internal server error
  */
-router.post('/:quizId/submit', validate(submitQuizSchema, { paramsSchema: quizIdSchema }), asyncHandler(submitQuiz));
+router.post('/:quizId/submit', ClerkExpressRequireAuth(), validate(submitQuizSchema, { paramsSchema: quizIdSchema }), asyncHandler(submitQuiz));
 
 /**
  * @swagger

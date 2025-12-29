@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@clerk/clerk-sdk-node": "^4.13.23",
     "@prisma/client": "^5.0.0",
     "@types/cors": "^2.8.19",
     "cheerio": "^1.1.2",

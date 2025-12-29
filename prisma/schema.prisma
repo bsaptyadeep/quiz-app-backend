@@ -29,6 +29,7 @@ enum TopicStatus {
 
 model Quiz {
   id        String     @id @default(uuid())
+  userId    String
   sourceUrl String
   title     String?
   questions Json?
