@@ -12,6 +12,9 @@ export const createQuizLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  validate: {
+    trustProxy: false, // Disable trust proxy validation (we handle it in app.ts)
+  },
 });
 
 /**
@@ -26,5 +29,8 @@ export const generalLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false, // Disable trust proxy validation (we handle it in app.ts)
+  },
 });
 
