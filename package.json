@@ -6,8 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --esm --respawn --transpile-only src/server.ts",
-    "postinstall": "prisma generate",
-    "build": "prisma generate && tsc",
+    "build": "tsc",
     "start": "node dist/server.js"
   },
   "keywords": [],
