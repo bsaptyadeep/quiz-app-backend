@@ -15,6 +15,9 @@ dotenv.config();
 const PORT = process.env.PORT || 4000;
 const app = express();
 
+// Trust proxy (required for Render and other reverse proxies)
+app.set('trust proxy', true);
+
 // Middleware
 app.use(cors({
   origin: true, // Allow all origins - customize for production
