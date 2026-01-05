@@ -10,11 +10,15 @@ export async function scrapeWebsite(url: string): Promise<string> {
   let browser: Browser | null = null;
 
   try {
+    const executablePath = chromium.executablePath();
+
+    console.log('Using Chromium at:', executablePath);
+
     // Launch Chromium browser in headless mode
     browser = await chromium.launch({
       headless: true,
       channel: 'chromium',
-      executablePath: '/opt/render/.cache/ms-playwright/chromium-1200/chrome-linux/chrome',
+      executablePath,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
