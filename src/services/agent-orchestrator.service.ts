@@ -18,6 +18,8 @@ async function scrapeWebsiteHTML(url: string): Promise<string> {
     // Launch Chromium browser in headless mode
     browser = await chromium.launch({
       headless: true,
+      channel: 'chromium', 
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     // Create a new page
