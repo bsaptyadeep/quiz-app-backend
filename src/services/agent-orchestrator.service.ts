@@ -19,6 +19,7 @@ async function scrapeWebsiteHTML(url: string): Promise<string> {
     browser = await chromium.launch({
       headless: true,
       channel: 'chromium', 
+      executablePath: '/opt/render/.cache/ms-playwright/chromium-1200/chrome-linux/chrome',
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
